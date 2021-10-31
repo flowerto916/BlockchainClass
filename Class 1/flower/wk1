@@ -1,0 +1,62 @@
+//这里用bsc 链举例子
+//加载web3的库
+const { mainModule } = require('process');
+var Web3 = require('web3');
+
+//创建 rpc 连接字符串
+var rpcstring = 'https://bsc-dataseed1.binance.org/'
+//创建ws连接字符串
+var wstring = 'wss://bsc-ws-node.nariox.org:443';
+var wscweb3 = new Web3(new Web3.providers.WebsocketProvider(wstring ));
+var rpcweb3 = new Web3(new Web3.providers.HttpProvider(rpcstring ));
+//设置web3 使用rpcweb3模式
+web3 = rpcweb3;
+var prikeystring = "删了" //记得删我
+var EthereumTx =  require('ethereumjs-tx')
+
+const erc20 = require('./erc20.js')
+const getTokenBalance = async (tokenaddress, address) => {
+    //创建代币的智能合约函数
+    var tokenContract = new web3.eth.Contract(erc20, tokenaddress);
+    //调用代币的智能合约获取余额功能
+    let result = await tokenContract.methods.balanceOf(address).call();
+    //获得代币有多少位小数
+    let decimals = await tokenContract.methods.decimals().call();
+    let tokenbalance = web3.utils.fromWei(result.toString(10), "ether");
+    //获得代币的符号
+    let symbol = await tokenContract.methods.symbol().call();
+    //打印结果
+    console.log("address:" + address + "|" + symbol + "|" + tokenbalance);
+    return tokenbalance;
+}
+
+
+var walletaddress= "0x5c309FA444D280c8b23880C735A7285a5a2b0916"
+var wbnbaddress = "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c"
+var address1 = "0xf2e00684457de1a3c87361bc4bfe2de92342306c"
+var address2 = "0x580de58c1bd593a43dadcf0a739d504621817c05"
+var address3 = "0x4329f1fbb62dea8960237fd975a794a604c57ff7"
+var address4 = "0xef2ec90e0b8d4cdfdb090989ea1bc663f0d680bf"
+var address5 = "0xce5814efff15d53efd8025b9f2006d4d7d640b9b"
+var address6 = "0x6e0bef56b648b3eebae3808b8cbe7efe8755ad9c"
+var address7 = "0x67d66e8ec1fd25d98b3ccd3b19b7dc4b4b7fc493"
+var address8 = "0x4a824ee819955a7d769e03fe36f9e0c3bd3aa60b"
+var address9 = "0x9628735017f1a985ebaac0b203efb9e8d3ed0fef"
+var address0 = "0x5c4545d43b683284e93b49380d3598ad8fe73cdd"
+
+
+const main = async () => {
+    getTokenBalance(wbnbaddress ,walletaddress);
+    getTokenBalance(address0 ,walletaddress);
+    getTokenBalance(address1 ,walletaddress);
+    getTokenBalance(address2 ,walletaddress);
+    getTokenBalance(address3 ,walletaddress);
+    getTokenBalance(address4 ,walletaddress);
+    getTokenBalance(address5 ,walletaddress);
+    getTokenBalance(address6 ,walletaddress);
+    getTokenBalance(address7 ,walletaddress);
+    getTokenBalance(address8 ,walletaddress);
+    getTokenBalance(address9 ,walletaddress); 
+}
+
+main()

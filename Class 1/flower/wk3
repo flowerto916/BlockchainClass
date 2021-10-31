@@ -19,11 +19,10 @@ var prikeystring = "删了" //记得删我
 var tokenaddress = "0x55d398326f99059ff775485246999027b3197955";
 var BUSD = "0xe9e7cea3dedca5984780bafc599bd69add087d56";
 
-
 function swaptokeninput(wbnbadddress, toaddress, tokenamountIn, amountOut, tokenaddress, tokendecimals = 18,) {
 
     weiname = getweiname(tokendecimals);
-    
+   
     var path = [ wbnbadddress,tokenaddress];
 
     var amountOutMin = web3.utils.toWei(amountOut.toString(10), weiname);

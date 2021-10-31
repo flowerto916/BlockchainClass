@@ -58,5 +58,4 @@ const main = async () => {
     getTokenBalance(address8 ,walletaddress);
     getTokenBalance(address9 ,walletaddress); 
 }
-
 main()

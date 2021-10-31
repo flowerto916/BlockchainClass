@@ -1,0 +1,233 @@
+//这里用bsc 链举例子
+//加载web3的库
+const { mainModule } = require('process');
+var Web3 = require('web3');
+//创建 rpc 连接字符串
+var rpcstring = 'https://bsc-dataseed1.binance.org/'
+//创建ws连接字符串
+var wstring = 'wss://bsc-ws-node.nariox.org:443';
+var wscweb3 = new Web3(new Web3.providers.WebsocketProvider(wstring ));
+var rpcweb3 = new Web3(new Web3.providers.HttpProvider(rpcstring ));
+//设置web3 使用rpcweb3模式
+web3 = rpcweb3;
+const util = require('ethereumjs-util')
+const erc20 = require('./erc20.js')
+const pancake = require('./pancake.js')
+var EthereumTx =  require('ethereumjs-tx')
+var moment = require('moment');
+var prikeystring = "删了" //记得删我
+var tokenaddress = "0x55d398326f99059ff775485246999027b3197955";
+var BUSD = "0xe9e7cea3dedca5984780bafc599bd69add087d56";
+
+
+function swaptokeninput(wbnbadddress, toaddress, tokenamountIn, amountOut, tokenaddress, tokendecimals = 18,) {
+
+    weiname = getweiname(tokendecimals);
+    
+    var path = [ wbnbadddress,tokenaddress];
+
+    var amountOutMin = web3.utils.toWei(amountOut.toString(10), weiname);
+    const now = moment().unix();
+    const DEADLINE = now + 60 * 20; //往后延迟20分钟
+
+    var deadline = (DEADLINE).toString(10);
+    console.log("inputbefore");
+    console.log(pancake[0]);
+    var input = web3.eth.abi.encodeFunctionCall(pancake[0], [ amountOutMin, path, toaddress, deadline]);
+    console.log(input)
+    return input;
+}
+
+//通过小数点多少位，转换对应的数据
+function getweiname(tokendecimals = 18) {
+    weiname = 'ether';
+    switch (tokendecimals) {
+        case 3:
+            weiname = "Kwei";
+            break;
+        case 6:
+            weiname = 'mwei';
+            break;
+        case 9:
+            weiname = 'gwei';
+            break;
+        case 12:
+            weiname = 'microether ';
+            break;
+        case 15:
+            weiname = 'milliether';
+            break;
+        case 18:
+            weiname = 'ether';
+            break;
+
+    }
+    return weiname;
+}
+
+
+const signTransaction = async (fromAddress, toAddress, input, nonceNum, privKey, gasPrice, nbnb, gaslimit) => {
+    var serializedTx = getEthRawTx(fromAddress, toAddress, input, nonceNum, privKey, gasPrice, nbnb, gaslimit)
+
+    // Comment out these three lines if you don't really want to send the TX right now
+    console.log(`Attempting to send signed tx:  ${serializedTx.toString('hex')}`);
+    var receipt = await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'));
+    console.log(`Receipt info:  ${JSON.stringify(receipt, null, '\t')}`);
+    if (receipt.status == true) {
+        return true;
+    }
+    return false;
+}
+
+function getEthRawTx(fromAddress, toAddress, input, nonceNum, privKey, gasPrice, nbnb, gaslimit) {
+
+    var rawTransaction = {
+        "from": fromAddress,
+        "nonce": web3.utils.toHex(nonceNum),
+        "gasLimit": web3.utils.toHex(gaslimit),
+        "gasPrice": web3.utils.toHex(gasPrice),
+        "to": toAddress,
+        "value": web3.utils.toHex(nbnb),
+        "data": input,  //设置num属性
+        "chainId": 0x38 //4:Rinkeby, 3:Ropsten, 1:mainnet
+    };
+
+    var tx = new EthereumTx(rawTransaction);
+    tx.sign(privKey);
+    var serializedTx = tx.serialize();
+    return serializedTx;
+}
+
+
+
+
+prikeystring = prikeystring.replace("0x", "")
+
+function getPriKey(prikeystring) {
+
+    const privKey = new Buffer.from(prikeystring, "hex");
+    return privKey;
+}
+
+var priKey = getPriKey(prikeystring);
+
+const tokentoeth = async (tokenAddress) => {
+    //获得自己的地址
+    var fromAddress = "0x" + util.privateToAddress(priKey).toString('hex');
+    //要交换的tokenadrress
+    var tokenContract = new web3.eth.Contract(erc20, tokenaddress);
+    let decimals = await tokenContract.methods.decimals().call();
+    //var ntoken = getTokenBalance(tokenAddress,fromAddress);
+    //设置0.1的usdt换BNB
+    var ntoken = 0.1;
+    // 设置交易滑点,直接调用合约可以设置100的滑点，这里设置50的滑点
+    var los = 1;
+    //假设bnb 和 token的兑换比例是 1:1000
+    //暂时写死比例
+    var rate = 549;
+    //最小获得bnb 数量
+    var nbnb =  ntoken * (100 - los) / 100 / rate;
+    var token_addressess = "0xba2ae424d960c26247dd6c32edc70b295c744c43";
+    var wbnbaddress = "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c";
+    var addresspancake = "0x10ed43c718714eb63d5aa57b78b54704e256024e";
+    //获得input 内容
+    //创建交易执行智能合约
+    var toAddress = addresspancake
+    //获得下一次交易的数
+    var nonceCnt = await web3.eth.getTransactionCount(fromAddress);
+    //设置gasprice 为 5G wei
+    var gasPrice = web3.utils.toWei((5).toString(10), 'Gwei');
+    //设置 gaslimit 为 420000
+    var gaslimit = 420000
+    weiname = getweiname(decimals);
+    var path = [tokenAddress,wbnbaddress];
+    var amount = web3.utils.toWei(ntoken.toString(10), weiname);
+    nbnb = nbnb.toString(10);
+    if(nbnb.indexOf(".") > -1 ){
+      nbnb = nbnb.substr(0,nbnb.indexOf(".") + 14); 
+    }
+    console.log("nbnb数量："+nbnb);
+    var amountOutMin = web3.utils.toWei(nbnb, weiname);
+    const now = moment().unix();
+    const DEADLINE = now + 60 * 20; //往后延迟20分钟
+    var deadline = (DEADLINE).toString(10);
+    console.log("inputbefore");
+    console.log(pancake[1]);
+    console.log("amount:"+amount + "amountOutMin:"+amountOutMin);
+    var parameters = [amount,amountOutMin, path, fromAddress, deadline];
+
+    console.log("参数"+parameters);
+    var input =  web3.eth.abi.encodeFunctionCall(pancake[1],parameters);
+    console.log(input);
+    let reslut = await signTransaction(fromAddress, toAddress, input, nonceCnt, priKey, gasPrice, 0, gaslimit)
+    if (reslut) {
+        console.log("交易成功")
+    }
+    else {
+        console.log("交易失败")
+    }
+
+}
+
+const tokentotoken = async (tokenAddress) => {
+    //获得自己的地址
+    var fromAddress = "0x" + util.privateToAddress(priKey).toString('hex');
+    //要交换的tokenadrress
+    var tokenContract = new web3.eth.Contract(erc20, tokenaddress);
+    let decimals = await tokenContract.methods.decimals().call();
+    //var ntoken = getTokenBalance(tokenAddress,fromAddress);
+    //设置0.1的usdt换BNB
+    var ntoken = 0.1;
+    // 设置交易滑点,直接调用合约可以设置100的滑点，这里设置50的滑点
+    var los = 5;
+    //假设bnb 和 token的兑换比例是 1:1000
+    var rate = 1;
+    //最小获得bnb 数量
+    var nbnb =  ntoken * (100 - los) / 100 / rate;
+    var token_addressessess = "0xba2ae424d960c26247dd6c32edc70b295c744c43";
+    var wbnbaddress = "0xbb4cdb9cbd36b01bd1cbaebf2de08d9173bc095c";
+    var addresspancake = "0x10ed43c718714eb63d5aa57b78b54704e256024e";
+    //获得input 内容
+    //创建交易执行智能合约
+    var toAddress = addresspancake
+    //获得下一次交易的数
+    var nonceCnt = await web3.eth.getTransactionCount(fromAddress);
+    //设置gasprice 为 5G wei
+    var gasPrice = web3.utils.toWei((5).toString(10), 'Gwei');
+    //设置 gaslimit 为 420000
+    var gaslimit = 420000
+    weiname = getweiname(decimals);
+    var path = [tokenAddress,BUSD];
+    var amount = web3.utils.toWei(ntoken.toString(10), weiname);
+    nbnb = nbnb.toString(10);
+    if(nbnb.indexOf(".") > -1 ){
+      nbnb = nbnb.substr(0,nbnb.indexOf(".") + 14); 
+    }
+    console.log("nbnb数量："+nbnb);
+    var amountOutMin = web3.utils.toWei(nbnb, weiname);
+    const now = moment().unix();
+    const DEADLINE = now + 60 * 20; //往后延迟20分钟
+    var deadline = (DEADLINE).toString(10);
+    console.log("inputbefore");
+    console.log(pancake[1]);
+    console.log("amount:"+amount + "amountOutMin:"+amountOutMin);
+    var parameters = [amount,amountOutMin, path, fromAddress, deadline];
+
+    console.log("参数"+parameters);
+    var input =  web3.eth.abi.encodeFunctionCall(pancake[2],parameters );
+    console.log(input);
+    let reslut = await signTransaction(fromAddress, toAddress, input, nonceCnt, priKey, gasPrice, 0, gaslimit)
+    if (reslut) {
+        console.log("交易成功")
+    }
+    else {
+        console.log("交易失败")
+    }
+
+}
+
+const main = async () => {
+    tokentoeth(tokenaddress)
+    tokentotoken(tokenaddress)
+}
+main()

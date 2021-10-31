@@ -1,0 +1,94 @@
+//这里用bsc 链举例子
+//加载web3的库
+const { mainModule } = require('process');
+var Web3 = require('web3');
+
+//创建 rpc 连接字符串
+var rpcstring = 'https://bsc-dataseed1.binance.org/'
+//创建ws连接字符串
+var wstring = 'wss://bsc-ws-node.nariox.org:443';
+var wscweb3 = new Web3(new Web3.providers.WebsocketProvider(wstring ));
+var rpcweb3 = new Web3(new Web3.providers.HttpProvider(rpcstring ));
+//设置web3 使用rpcweb3模式
+web3 = rpcweb3;
+var prikeystring = "删了" //记得删我
+var EthereumTx =  require('ethereumjs-tx')
+
+const signTransaction = async (fromAddress, toAddress, input, nonceNum, privKey, gasPrice, nbnb, gaslimit) => {
+    var serializedTx = getEthRawTx(fromAddress, toAddress, input, nonceNum, privKey, gasPrice, nbnb, gaslimit)
+
+    // Comment out these three lines if you don't really want to send the TX right now
+    console.log(`Attempting to send signed tx:  ${serializedTx.toString('hex')}`);
+    var receipt = await web3.eth.sendSignedTransaction('0x' + serializedTx.toString('hex'));
+    console.log(`Receipt info:  ${JSON.stringify(receipt, null, '\t')}`);
+    if (receipt.status == true) {
+        return true;
+    }
+    return false;
+}
+
+function getEthRawTx(fromAddress, toAddress, input, nonceNum, privKey, gasPrice, nbnb, gaslimit) {
+
+    var rawTransaction = {
+        "from": fromAddress,
+        "nonce": web3.utils.toHex(nonceNum),
+        "gasLimit": web3.utils.toHex(gaslimit),
+        "gasPrice": web3.utils.toHex(gasPrice),
+        "to": toAddress,
+        "value": web3.utils.toHex(nbnb),
+        "data": input,  //设置num属性
+        "chainId": 0x38 //4:Rinkeby, 3:Ropsten, 1:mainnet
+    };
+
+    var tx = new EthereumTx(rawTransaction);
+    tx.sign(privKey);
+    var serializedTx = tx.serialize();
+    return serializedTx;
+}
+
+
+const util = require('ethereumjs-util')
+
+prikeystring = prikeystring.replace("0x", "")
+
+function getPriKey(prikeystring) {
+
+    const privKey = new Buffer.from(prikeystring, "hex");
+    return privKey;
+}
+
+var priKey = getPriKey(prikeystring);
+
+const send = async () => {
+    //获得自己的地址
+    var fromAddress = "0x" + util.privateToAddress(priKey).toString('hex');
+    //发送给谁
+    var toAddress = "0x5c309FA444D280c8b23880C735A7285a5a2b0915"
+    var nsendBNB = 0.0001
+    //假设交易 0.008个bnb
+    var nbnb = web3.utils.toWei((nsendBNB).toString(10), 'ether');
+    //设置gasprice 为 5G wei
+    var gasPrice = web3.utils.toWei((5).toString(10), 'Gwei');
+    //设置 gaslimit 为 420000
+    var gaslimit = 420000
+    //没有调用智能合约，将input设置为空
+    var input = ""
+    //获得下一次交易的数
+    console.log("发送地址是：" + fromAddress)
+    var nonceCnt = await web3.eth.getTransactionCount(fromAddress);
+    let reslut = await signTransaction(fromAddress, toAddress, input, nonceCnt, priKey, gasPrice, nbnb, gaslimit)
+    if (reslut) {
+        console.log("交易成功")
+    }
+    else {
+        console.log("交易失败")
+    }
+
+}
+
+const main = async () => {
+    send();
+  
+}
+
+main()
